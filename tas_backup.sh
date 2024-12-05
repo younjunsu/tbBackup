@@ -14,6 +14,9 @@
 ####################################################
 # User Settings.
 #-----------------------------------------------------------------------
+# Backup Remove Day (default 1day)
+BACKUP_REMOVE_DAY=1
+
 # Backup Store Type (Y or N)
 BACKUP_FILESYSTEM=Y
 BACKUP_TAS=N 
@@ -37,8 +40,8 @@ TB_HOME=/root/tibero7
 DB_USER=sys
 DB_PASS=tibero
 
-# Backup Store Type: TAS, Connection TAS Port
-TAS_PORT=
+# Backup Store Type: TAS, Connection TAS Port (default 7629)
+TAS_PORT=7629
 
 # Backup Method: BACKUP_BEGINEND
 # Y: Prev Active Ignore , N: Prev Active Stop
@@ -56,7 +59,8 @@ TBRMGR_WITH_PASSWORD_FILE=N
 SCRIPT_NAME=${0}
 BACKUP_TIME=`date +%y%m%d_%H%M`
 BACKUP_DIR="${WORK_DIR}"/"${BACKUP_TIME}"
-BACKUP_CTL="${BACKUP_DIR}"/control.ctl.bak
+BACKUP_CTL_NORESETLOGS="${BACKUP_DIR}"/control_noresetlogs.ctl.bak
+BACKUP_CTL_RESETLOGS="${BACKUP_DIR}"/control_resetlogs.ctl.bak
 BACKUP_CONFIG="${BACKUP_DIR}"/tibero_config.bak
 META_FILE="${BACKUP_DIR}"/meta/datafile.log
 META_TABLESPACE="${BACKUP_DIR}"/meta/tablespace.log
@@ -351,7 +355,8 @@ echo "   - TBRMGR_WITH_PASSWORD_FILE: ${TBRMGR_WITH_PASSWORD_FILE}"
 #-----------------------------------------------------------------------
 echo "   - BACKUP_TIME: ${BACKUP_TIME}"
 echo "   - BACKUP_DIR: ${BACKUP_DIR}"
-echo "   - BACKUP_CTL: ${BACKUP_CTL}"
+echo "   - BACKUP_CTL_NORESETLOGS: ${BACKUP_CTL_NORESETLOGS}"
+echo "   - BACKUP_CTL_RESETLOGS: ${BACKUP_CTL_RESETLOGS}"
 echo "   - BACKUP_CONFIG: ${BACKUP_CONFIG}"
 #-----------------------------------------------------------------------
 echo "   - META_FILE: ${META_FILE}"
@@ -691,18 +696,26 @@ EOF
 }
 
 ####################################################
+# Backup Remove Day
+####################################################
+function_backup_remove(){
+    echo "remove"
+}
+####################################################
 # Controlfile Generation
 ####################################################
 function_controlfile_backup(){
 echo "## Controlfile Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
-echo "  - Controfile Path: ${BACKUP_CTL}"
+echo "  - Controfile (noresetlogs) Path: ${BACKUP_CTL_NORESETLOGS}"
+echo "  - Controfile (resetlogs) Path: ${BACKUP_CTL_RESETLOGS}"
 
 # Controfile File 
 #-----------------------------------------------------------------------
 su - ${TB_USER} -c "
 tbsql ${DB_USER}/${DB_PASS} -s <<EOF
-alter database backup controlfile to trace as '$BACKUP_CTL' reuse noresetlogs;
+alter database backup controlfile to trace as '$BACKUP_CTL_NORESETLOGS' reuse noresetlogs;
+alter database backup controlfile to trace as '$BACKUP_CTL_RESETLOGS' reuse resetlogs;
 EOF
 "
 #-----------------------------------------------------------------------
@@ -953,10 +966,12 @@ function_main(){
         # begin/end backup
         if [ "N" == "${BACKUP_TBRMGR}" ]
         then
+            
             function_script_start
             function_script_options
             function_error
             function_meta_getting
+            function_backup_remove
             function_controlfile_backup
             function_archive_begin
             function_begin_backup
@@ -974,6 +989,7 @@ function_main(){
             function_script_options
             function_error
             function_meta_getting
+            function_backup_remove
             function_controlfile_backup
             function_tbrmgr
             functipn_script_end
