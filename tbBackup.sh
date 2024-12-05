@@ -19,11 +19,11 @@ BACKUP_REMOVE_DAY=1
 
 # Backup Store Type (Y or N)
 BACKUP_FILESYSTEM=Y
-BACKUP_TAS=N 
+BACKUP_TAS=N
 
 # Backup Method (Y or N)
-BACKUP_BEGINEND=Y
-BACKUP_TBRMGR=N
+BACKUP_BEGINEND=N
+BACKUP_TBRMGR=Y
 
 # Backup Directory
 WORK_DIR=/root/work/backup
@@ -34,13 +34,13 @@ BACKUP_ARCHIVE_INCLUDE=Y
 
 # Backup Tibero OS User
 TB_USER=root
-TB_HOME=/root/tibero7
+TB_HOME=/root/tibero6
 
 # Backup Tibero DB User and Password
 DB_USER=sys
 DB_PASS=tibero
 
-# Backup Store Type: TAS, Connection TAS Port (default 7629)
+# Backup Store Type: TAS, Connection TAS Port (default TCP_7629)
 TAS_PORT=7629
 
 # Backup Method: BACKUP_BEGINEND
@@ -50,7 +50,7 @@ BACKUP_BEGINEND_STATE_IGRNORE=N
 # Backup Method: BACKUP_TBRMGR, Options (Y or N)
 TBRMGR_INCREMENTAL_BACKUP=N
 TBRMGR_COMPRESS=N
-TBRMGR_WITH_ARCHIVELOG=N
+TBRMGR_WITH_ARCHIVELOG=Y
 TBRMGR_WITH_PASSWORD_FILE=N 
 #-----------------------------------------------------------------------
 
@@ -59,17 +59,28 @@ TBRMGR_WITH_PASSWORD_FILE=N
 SCRIPT_NAME=${0}
 BACKUP_TIME=`date +%y%m%d_%H%M`
 BACKUP_DIR="${WORK_DIR}"/"${BACKUP_TIME}"
-BACKUP_CTL_NORESETLOGS="${BACKUP_DIR}"/control_noresetlogs.ctl.bak
-BACKUP_CTL_RESETLOGS="${BACKUP_DIR}"/control_resetlogs.ctl.bak
-BACKUP_CONFIG="${BACKUP_DIR}"/tibero_config.bak
-META_FILE="${BACKUP_DIR}"/meta/datafile.log
-META_TABLESPACE="${BACKUP_DIR}"/meta/tablespace.log
+BACKUP_CTL_DIR="${BACKUP_DIR}"/backup_controlfile
+BACKUP_DATAFILE_DIR="${BACKUP_DIR}"/backup_datafile
+BACKUP_CONFIG_DIR="${BACKUP_DIR}"/backup_config
+BACKUP_ARCH_DIR="${BACKUP_DIR}"/backup_archive
+BACKUP_LOG_DIR="${BACKUP_DIR}"/log
+BACKUP_CTL_NORESETLOGS="${BACKUP_CTL_DIR}"/control_noresetlogs.ctl.bak
+BACKUP_CTL_RESETLOGS="${BACKUP_CTL_DIR}"/control_resetlogs.ctl.bak
+BACKUP_CONFIG="${BACKUP_CONFIG_DIR}"/tibero_config.bak
+
+
+META_FILE="${BACKUP_META_DIR}"/datafile.log
+META_TABLESPACE="${BACKUP_META_DIR}"/tablespace.log
+BACKUP_META_DIR="${BACKUP_DIR}"/log/meta
 LOG_SCIPRT="${BACKUP_DIR}"/log/tibero_backup.log
 LOG_BACKUP_STATUS_PREV="${BACKUP_DIR}"/log/tibero_backup_status_prev.log
 LOG_BACKUP_STATUS_POST="${BACKUP_DIR}"/log/tibero_backup_status_post.log
-su - ${TB_USER} -c "mkdir -p "${BACKUP_DIR}"/arch"
-su - ${TB_USER} -c "mkdir -p "${BACKUP_DIR}"/meta"
-su - ${TB_USER} -c "mkdir -p "${BACKUP_DIR}"/log"
+su - ${TB_USER} -c "mkdir -p "${BACKUP_ARCH_DIR}""
+su - ${TB_USER} -c "mkdir -p "${BACKUP_LOG_DIR}""
+su - ${TB_USER} -c "mkdir -p "${BACKUP_META_DIR}""
+su - ${TB_USER} -c "mkdir -p "${BACKUP_CTL_DIR}""
+su - ${TB_USER} -c "mkdir -p "${BACKUP_DATAFILE_DIR}""
+su - ${TB_USER} -c "mkdir -p "${BACKUP_CONFIG_DIR}""
 LINE_HEAD="#################################################################################"
 LINE_MODULE="---------------------------------------------------------------------------------"
 #-----------------------------------------------------------------------
@@ -84,7 +95,7 @@ echo "${LINE_MODULE}"
 
 # Script Paramter Checking
 #-----------------------------------------------------------------------
-if [ -z "${TB_USER}" ] || [ -z "${TB_HOME}" ]
+if [ -z "${TB_USER}" ] || [ -z "${TB_HOME}" ] 
 then
     ERROR_FLAG=Y
     echo "  ERROR - TB_USER or TB_HOME Checking."
@@ -122,6 +133,7 @@ else
     echo "   - DB_PASS: ******"
 fi
 
+# 개선: 경우의 수 늘릴지 고민?
 if [ "Y" == "${BACKUP_FILESYSTEM}" ] && [ "Y" == "${BACKUP_TAS}" ]
 then
     ERROR_FLAG=Y
@@ -134,7 +146,8 @@ else
     echo "   - BACKUP_TAS: ${BACKUP_TAS}"
 fi
 
-if [ "N" == "${BACKUP_BEGINEND}" ] && [ "Y" == "${BACKUP_TBRMGR}" ]
+# 개선: 경우의 수 늘릴지 고민?
+if [ "Y" == "${BACKUP_BEGINEND}" ] && [ "Y" == "${BACKUP_TBRMGR}" ]
 then
     ERROR_FLAG=Y
     echo "  ERROR - BACKUP_BEGINEND or BACKUP_TBRMGR Checking."
@@ -159,7 +172,7 @@ else
     echo "    - Access."
 fi
 
-if [ ! -d "${BACKUP_DIR}"/meta ]
+if [ ! -d "${BACKUP_META_DIR}" ]
 then
     ERROR_FLAG=Y
     echo "  ERROR - \$BACKUP_DIR/meta Directory Checking"
@@ -171,7 +184,7 @@ else
 fi 
 
 
-if [ ! -d "${BACKUP_DIR}"/log ]
+if [ ! -d "${BACKUP_LOG_DIR}" ]
 then
     ERROR_FLAG=Y
     echo "  ERROR - \$BACKUP_DIR/log Directory Checking"
@@ -339,6 +352,10 @@ echo "      - TAS_PORT: ${TAS_PORT}"
 echo "   - BACKUP_BEGINEND: ${BACKUP_BEGINEND}"
 echo "      - BACKUP_BEGINEND_STATE_IGRNORE: ${BACKUP_BEGINEND_STATE_IGRNORE}"
 echo "   - BACKUP_TBRMGR: ${BACKUP_TBRMGR}"
+echo "      - TBRMGR_INCREMENTAL_BACKUP: ${TBRMGR_INCREMENTAL_BACKUP}"
+echo "      - TBRMGR_COMPRESS: ${TBRMGR_COMPRESS}"
+echo "      - TBRMGR_WITH_ARCHIVELOG: ${TBRMGR_WITH_ARCHIVELOG}"
+echo "      - TBRMGR_WITH_PASSWORD_FILE: ${TBRMGR_WITH_PASSWORD_FILE}"
 #-----------------------------------------------------------------------
 echo "   - WORK_DIR: ${WORK_DIR}"
 echo "   - ARCH_DIR: ${ARCH_DIR}"
@@ -347,11 +364,6 @@ echo "   - TB_USER: ${TB_USER}"
 echo "   - TB_HOME: ${TB_HOME}"
 echo "   - DB_USER: ${DB_USER}"
 echo "   - DB_PASS: ${DB_PASS}"
-#-----------------------------------------------------------------------
-echo "   - TBRMGR_INCREMENTAL_BACKUP: ${TBRMGR_INCREMENTAL_BACKUP}"
-echo "   - TBRMGR_COMPRESS: ${TBRMGR_COMPRESS}"
-echo "   - TBRMGR_WITH_ARCHIVELOG: ${TBRMGR_WITH_ARCHIVELOG}"
-echo "   - TBRMGR_WITH_PASSWORD_FILE: ${TBRMGR_WITH_PASSWORD_FILE}"
 #-----------------------------------------------------------------------
 echo "   - BACKUP_TIME: ${BACKUP_TIME}"
 echo "   - BACKUP_DIR: ${BACKUP_DIR}"
@@ -362,7 +374,7 @@ echo "   - BACKUP_CONFIG: ${BACKUP_CONFIG}"
 echo "   - META_FILE: ${META_FILE}"
 echo "   - META_TABLESPACE: ${META_TABLESPACE}"
 #-----------------------------------------------------------------------
-echo "   - LNAG: ${LANG}"
+echo "   - LANG: ${LANG}"
 echo "   - LOG_SCIPRT: ${LOG_SCIPRT}"
 echo "   - LOG_BACKUP_STATUS_PREV: ${LOG_BACKUP_STATUS_PREV}"
 echo "   - LOG_BACKUP_STATUS_POST: ${LOG_BACKUP_STATUS_POST}"
@@ -370,6 +382,7 @@ echo "   - LOG_BACKUP_STATUS_POST: ${LOG_BACKUP_STATUS_POST}"
 echo "${LINE_MODULE}"
 #grep -A100 "Sciprt Parameter Check" ${SCRIPT_NAME} |grep -B100 "Sciprt Error Check" |grep -vE "#|^$"
 }
+
 funciton_backup_configuration(){
 echo "${LINE_HEAD}"
 echo "# Tibero Configuration Backup"
@@ -699,7 +712,19 @@ EOF
 # Backup Remove Day
 ####################################################
 function_backup_remove(){
-    echo "remove"
+    BACKUP_DAY=`echo $BACKUP_TIME |awk -F _ '{print $1}'`
+    BACKUP_REMOVE_DAY=`echo ${BACKUP_TIME} - ${BACKUP_REMOVE_DAY} |bc`
+for ... in ..
+do
+if [ ]
+then
+su - ${TB_USER} -c "
+rm -rf ${BACKUP_DIR}
+"
+fi
+
+done
+
 }
 ####################################################
 # Controlfile Generation
@@ -758,12 +783,12 @@ DATAFILE_LIST=`cat ${META_FILE}`
 for DATAFILE_NAME in ${DATAFILE_LIST[@]}
 do
     echo "  - Datafile Copy: ${file_name}"
-    cp ${DATAFILE_NAME} ${BACKUP_DIR}
+    cp ${DATAFILE_NAME} ${BACKUP_DATAFILE_DIR}
 done
 
-BACKUP_DIR_META=`ls ${BACKUP_DIR}`
+BACKUP_DATAFILE_DIR_META=`ls ${BACKUP_DATAFILE_DIR}`
 echo "  - File Copy List"
-echo ${BACKUP_DIR_META[@]}
+echo ${BACKUP_DATAFILE_META[@]}
 echo "${LINE_MODULE}"
 echo "## Tablespace FileCopy (FileSystem) End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -782,13 +807,13 @@ DATAFILE_LIST=`cat ${META_FILE}`
 for DATAFILE_NAME in ${DATAFILE_LIST[@]}
 do
 tbascmd ${TAS_PORT} <<EOF
-cptolocal ${DATAFILE_NAME} ${BACKUP_DIR}
+cptolocal ${DATAFILE_NAME} ${BACKUP_DATAFILE_DIR}
 EOF
 done
 
-BACKUP_DIR_META=`echo `ls ${BACKUP_DIR}``
+BACKUP_DATAFILE_META=`echo `ls ${BACKUP_DATAFILE_DIR}``
 echo "  - File Copy List"
-echo ${BACKUP_DIR_META[@]}
+echo ${BACKUP_DATAFILE_META[@]}
 echo "${LINE_MODULE}"
 echo "## Tablespace FileCopy (TAS) End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -865,7 +890,7 @@ EOF"`
 for ARC_NAME in ${ARC_BEGIN_END_LIST[@]}
 do
     echo "  - Archive Log Copy: ${ARC_NAME}"
-    cp -rp ${ARC_NAME} ${BACKUP_DIR}/arch
+    cp -rp ${ARC_NAME} ${BACKUP_ARCH_DIR}
 done
 echo "${LINE_MODULE}"
 echo "## Archive Log Copy End: `date +%Y-%m-%d\ %T`"
@@ -931,9 +956,10 @@ echo "  - TBRMGR Backup Options: ${TBRMGR_OPTIONS}"
 # tbrmgr running
 #-----------------------------------------------------------------------
 su - ${TB_USER} -c "
-tbrmgr backup -s -v -L ${BACKUP_DIR}/log -o ${BACKUP_DIR} ${TBRMGR_OPTIONS}
+tbrmgr backup -s -v  -o ${BACKUP_DATAFILE_DIR} ${TBRMGR_OPTIONS} 
 "
-# 100% Gathering: |strings  |grep -vw "[0-9][0-9].[0-9]%" |grep -vw "[0-9].[0-9]%"
+# 6버전에 없는 옵션 -L ${BACKUP_DIR}/log
+# 100% Gathering: |strings  |grep -vw "[0-9][0-9].[0-9]%" |grep -vw "[0-9].[0-9]%" |grep -vw "[0-9].[0-9][0-9]%" |grep -vw "[2-9][0-9].[0-9][0-9]%" 
 #-----------------------------------------------------------------------
 echo "${LINE_MODULE}"
 echo "## TBRMGR Backup End: `date +%Y-%m-%d\ %T`"
