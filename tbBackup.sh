@@ -67,6 +67,7 @@ BACKUP_LOG_DIR="${BACKUP_DIR}"/log
 BACKUP_CTL_NORESETLOGS="${BACKUP_CTL_DIR}"/control_noresetlogs.ctl.bak
 BACKUP_CTL_RESETLOGS="${BACKUP_CTL_DIR}"/control_resetlogs.ctl.bak
 BACKUP_CONFIG="${BACKUP_CONFIG_DIR}"/tibero_config.bak
+BACKUP_EPA_DIR="${BACKUP_DIR}"/backup_epa
 
 
 META_FILE="${BACKUP_META_DIR}"/datafile.log
@@ -81,6 +82,7 @@ su - ${TB_USER} -c "mkdir -p "${BACKUP_META_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CTL_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_DATAFILE_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CONFIG_DIR}""
+su - ${TB_USER} -c "mkdir -p "${BACKUP_EPA_DIR}""
 LINE_HEAD="#################################################################################"
 LINE_MODULE="---------------------------------------------------------------------------------"
 #-----------------------------------------------------------------------
@@ -342,7 +344,7 @@ function_script_options(){
 #-----------------------------------------------------------------------
 su - ${TB_USER} -c "echo"
 echo "${LINE_MODULE}"
-echo "## tibero_backup.sh Sciprt Parameters"
+echo "## ${SCRIPT_NAME} Sciprt Parameters"
 echo "${LINE_MODULE}"
 #-----------------------------------------------------------------------
 echo "   - BACKUP_FILESYSTEM: ${BACKUP_FILESYSTEM}"
@@ -966,6 +968,20 @@ echo "## TBRMGR Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 }
 
+####################################################
+# EPA Libraries Backup
+####################################################
+function_backup_epa(){
+    echo "EPA Backup"
+echo "## Archive Log Copy Start: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
+EPA_LISTS=`su - ${TB_USER} -c "
+tbsql ${DB_USER}/${DB_PASS} -s <<EOF
+set pagesize 0
+set feedback off
+select library_name from dba_libraries;
+EOF"`
+}
 ####################################################
 # Script Start Message
 ####################################################
