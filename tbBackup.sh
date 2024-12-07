@@ -714,15 +714,29 @@ EOF
 # Backup Remove Day
 ####################################################
 function_backup_remove(){
-    BACKUP_DAY=`echo $BACKUP_TIME |awk -F _ '{print $1}'`
-    BACKUP_REMOVE_DAY=`echo ${BACKUP_TIME} - ${BACKUP_REMOVE_DAY} |bc`
+
+if [ -z "${BACKUP_REMOVE_DAY}" ] || [ "0" == "${BACKUP_REMOVE_DAY}" ]
+then
+    continue
+fi
+
+if [ -z "${BACKUP_REMOVE_DAY}" ]
+then
+    continue
+fi
+
+
+BACKUP_DAY=`echo $BACKUP_TIME |awk -F _ '{print $1}'`
+BACKUP_REMOVE_DAY=`echo ${BACKUP_TIME} - ${BACKUP_REMOVE_DAY} |bc`
 for ... in ..
 do
-if [ ]
-then
 su - ${TB_USER} -c "
-rm -rf ${BACKUP_DIR}
+rm -rf ${BACKUP_REMOVE_DAY}_*
 "
+
+if [ "${BACKUP_CYCLE_DAY}" == "${BACKUP_DAY}" ]
+then
+
 fi
 
 done
