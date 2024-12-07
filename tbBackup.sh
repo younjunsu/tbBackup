@@ -15,9 +15,6 @@
 ####################################################
 # User Settings.
 #-----------------------------------------------------------------------
-# Backup .passwd (Y or N)
-BACKUP_PASSWD_FILE=Y
-
 # Backup Remove Day (default 1, empty or 0: Not remove)
 BACKUP_REMOVE_DAY=1
 
@@ -29,11 +26,19 @@ BACKUP_TAS=N
 BACKUP_BEGINEND=Y
 BACKUP_TBRMGR=N
 
+# Backup .passwd (Y or N)
+BACKUP_PASSWD_FILE=Y
+
+# More Backup (Y or N)
+BACKUP_EPA=N
+BACKUP_EXTERNAL_TABLE=N
+BACKUP_DIRECTORY_OBJECT=N
+
 # Backup Directory
 WORK_DIR=/root/work/backup
 ARCH_DIR=/root/work/backup
 
-# Backup Archive Include
+# Backup Archive Include (Y or N)
 BACKUP_ARCHIVE_INCLUDE=Y
 
 # Backup Tibero OS User
@@ -44,7 +49,7 @@ TB_HOME=/root/tibero6
 DB_USER=sys
 DB_PASS=tibero
 
-# Backup Store Type: TAS, Connection TAS Port (default TCP_7629)
+# Backup Store Type: TAS, Connection TAS Port
 TAS_PORT=7629
 
 # Backup Method: BACKUP_BEGINEND
@@ -1068,7 +1073,7 @@ echo "${LINE_MODULE}"
 }
 
 ####################################################
-# EPA Libraries Backup
+# .passwd File Backup
 ####################################################
 function_backup_passwd_file(){
 # function_backup_passwd_file(){...}
@@ -1083,6 +1088,31 @@ echo "${LINE_MODULE}"
 echo "## .passwd File Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 }
+
+####################################################
+# external table Backup
+####################################################
+function_external_table(){
+# function_external_table(){...}
+#
+#
+
+#select * from dba_external_locations;
+#select * from dba_external_tables;
+}
+
+####################################################
+# Directory Object Backup
+####################################################
+function_directory_object(){
+# function_external_table(){...}
+#
+#    
+
+#select path from dba_directories where path not like '@SVR_HOME%';
+
+}
+
 
 ####################################################
 # Script Start Message
