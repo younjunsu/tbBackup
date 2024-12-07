@@ -6,6 +6,7 @@
 #
 # Sciprt Version History
 #   - Version 2024.10.11, by junsu
+#   - Verison 2024.12.08, by junsu
 #
 ########################################################################
 
@@ -14,6 +15,9 @@
 ####################################################
 # User Settings.
 #-----------------------------------------------------------------------
+# Backup .passwd (Y or N)
+BACKUP_PASSWD_FILE=Y
+
 # Backup Remove Day (default 1, empty or 0: Not remove)
 BACKUP_REMOVE_DAY=1
 
@@ -51,7 +55,7 @@ BACKUP_BEGINEND_STATE_IGRNORE=N
 TBRMGR_INCREMENTAL_BACKUP=N
 TBRMGR_COMPRESS=N
 TBRMGR_WITH_ARCHIVELOG=Y
-TBRMGR_WITH_PASSWORD_FILE=N 
+TBRMGR_WITH_PASSWORD_FILE=Y
 #-----------------------------------------------------------------------
 
 # Do Not Change
@@ -59,18 +63,18 @@ TBRMGR_WITH_PASSWORD_FILE=N
 SCRIPT_NAME=${0}
 BACKUP_TIME=`date +%y%m%d_%H%M`
 BACKUP_DIR="${WORK_DIR}"/"${BACKUP_TIME}"
+BACKUP_LOG_DIR="${BACKUP_DIR}"/log
+BACKUP_META_DIR="${BACKUP_DIR}"/log/meta
+BACKUP_CONFIG_DIR="${BACKUP_DIR}"/backup_config
 BACKUP_CTL_DIR="${BACKUP_DIR}"/backup_controlfile
 BACKUP_DATAFILE_DIR="${BACKUP_DIR}"/backup_datafile
-BACKUP_CONFIG_DIR="${BACKUP_DIR}"/backup_config
 BACKUP_ARCH_DIR="${BACKUP_DIR}"/backup_archive
-BACKUP_LOG_DIR="${BACKUP_DIR}"/log
+BACKUP_EPA_DIR="${BACKUP_DIR}"/backup_epa
+BACKUP_CONFIG="${BACKUP_CONFIG_DIR}"/tibero_config.bak
 BACKUP_CTL_NORESETLOGS="${BACKUP_CTL_DIR}"/control_noresetlogs.ctl.bak
 BACKUP_CTL_RESETLOGS="${BACKUP_CTL_DIR}"/control_resetlogs.ctl.bak
-BACKUP_CONFIG="${BACKUP_CONFIG_DIR}"/tibero_config.bak
-BACKUP_EPA_DIR="${BACKUP_DIR}"/backup_epa
 META_FILE="${BACKUP_META_DIR}"/datafile.log
 META_TABLESPACE="${BACKUP_META_DIR}"/tablespace.log
-BACKUP_META_DIR="${BACKUP_DIR}"/log/meta
 LOG_SCIPRT="${BACKUP_DIR}"/log/tibero_backup.log
 LOG_BACKUP_STATUS_PREV="${BACKUP_DIR}"/log/tibero_backup_status_prev.log
 LOG_BACKUP_STATUS_POST="${BACKUP_DIR}"/log/tibero_backup_status_post.log
@@ -381,21 +385,26 @@ echo "   - ARCH_DIR: ${ARCH_DIR}"
 echo "   - TB_USER: ${TB_USER}"
 echo "   - TB_HOME: ${TB_HOME}"
 echo "   - DB_USER: ${DB_USER}"
-echo "   - DB_PASS: ${DB_PASS}"
+# 보안상 비활성화 (디버깅 필요에만 활성화)
+#echo "   - DB_PASS: ${DB_PASS}"
 #-----------------------------------------------------------------------
 echo "   - BACKUP_TIME: ${BACKUP_TIME}"
 echo "   - BACKUP_DIR: ${BACKUP_DIR}"
-echo "   - BACKUP_CTL_NORESETLOGS: ${BACKUP_CTL_NORESETLOGS}"
-echo "   - BACKUP_CTL_RESETLOGS: ${BACKUP_CTL_RESETLOGS}"
-echo "   - BACKUP_CONFIG: ${BACKUP_CONFIG}"
+echo "      - Configuration: ${BACKUP_CONFIG_DIR}"
+echo "      - ControlFile: ${BACKUP_CTL_DIR}"
+echo "      - Datafile: ${BACKUP_DATAFILE_DIR}"
+echo "      - ArchiveLog: ${BACKUP_ARCH_DIR}"
+echo "      - External Procedure: ${BACKUP_EPA_DIR}"
+echo "   - BACKUP_REMOVE_DAY: ${BACKUP_REMOVE_DAY}"
+echo "   - BACKUP_PASSWD_FILE: ${BACKUP_PASSWD_FILE}"
 #-----------------------------------------------------------------------
 echo "   - META_FILE: ${META_FILE}"
 echo "   - META_TABLESPACE: ${META_TABLESPACE}"
 #-----------------------------------------------------------------------
-echo "   - LANG: ${LANG}"
 echo "   - LOG_SCIPRT: ${LOG_SCIPRT}"
 echo "   - LOG_BACKUP_STATUS_PREV: ${LOG_BACKUP_STATUS_PREV}"
 echo "   - LOG_BACKUP_STATUS_POST: ${LOG_BACKUP_STATUS_POST}"
+echo "   - LANG: ${LANG}"
 #-----------------------------------------------------------------------
 echo "${LINE_MODULE}"
 #grep -A100 "Sciprt Parameter Check" ${SCRIPT_NAME} |grep -B100 "Sciprt Error Check" |grep -vE "#|^$"
@@ -605,6 +614,9 @@ echo
 }
 
 function_collection_backup_status_prev(){
+# function_collection_backup_status_prev(){...}
+#
+#
 echo "${LINE_HEAD}"
 echo "# Collection Log Prev Backup Status"
 echo "${LINE_HEAD}"
@@ -666,6 +678,9 @@ EOF
 }
 
 function_collection_backup_status_post(){
+# function_collection_backup_status_post(){...}
+#
+#
 echo "${LINE_HEAD}"
 echo "# Collection Log Post Backup Status"
 echo "${LINE_HEAD}"
@@ -730,6 +745,9 @@ EOF
 # Backup Remove Day
 ####################################################
 function_backup_remove(){
+# function_backup_remove(){...}
+#
+#
 if [ -z "${BACKUP_REMOVE_DAY}" ] || [ "0" == "${BACKUP_REMOVE_DAY}" ]
 then
     return
@@ -762,6 +780,9 @@ echo "${LINE_MODULE}"
 # Controlfile Generation
 ####################################################
 function_controlfile_backup(){
+# function_controlfile_backup(){...}
+#
+#
 echo "## Controlfile Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 echo "  - Controfile (noresetlogs) Path: ${BACKUP_CTL_NORESETLOGS}"
@@ -786,6 +807,9 @@ echo "${LINE_MODULE}"
 # BEGIN BACKUP
 ####################################################
 function_begin_backup(){
+# function_begin_backup(){...}
+#
+#
 echo "## Tablespace Begin Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 echo "  - Tablespace Name : `echo ${META_TABLESPACE[@]}`"
@@ -807,6 +831,9 @@ echo "${LINE_MODULE}"
 # File System Datafile Copy
 ####################################################
 function_tablespace_filecopy_filesystem(){
+# function_tablespace_filecopy_filesystem(){...}
+#
+#
 if [ "Y" == "${BACKUP_FILESYSTEM}" ] && [ "N" == "${BACKUP_TAS}" ]
 then
 echo "## Tablespace FileCopy (FileSystem) Start: `date +%Y-%m-%d\ %T`"
@@ -831,6 +858,9 @@ fi
 # TAS Datafile Copy
 ####################################################
 function_tablespace_filecopy_tas(){
+# function_tablespace_filecopy_tas(){...}
+#
+#
 if [ "N" == "${BACKUP_FILESYSTEM}" ] && [ "Y" == "${BACKUP_TAS}" ]
 then
 echo "## Tablespace FileCopy (TAS) Start: `date +%Y-%m-%d\ %T`"
@@ -856,6 +886,9 @@ fi
 # END BACKUP
 ####################################################
 function_end_backup(){
+# function_end_backup(){...}
+#
+#
 echo "## Tablespace End Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 tbs_name_var=`cat ${META_TABLESPACE}`
@@ -876,6 +909,9 @@ echo "${LINE_MODULE}"
 # Archive Log Begin/End
 ####################################################
 function_archive_begin(){
+# function_archive_begin(){...}
+#
+#
 echo "## Archive Begin Sequence Number Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 ARC_BEGIN_NUMBER=`su - ${TB_USER} -c "
@@ -893,6 +929,9 @@ echo "${LINE_MODULE}"
 }
 
 function_archive_end(){
+# function_archive_end(){...}
+#
+#
 echo "## Archive End Sequence Number Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 ARC_END_NUMBER=`su - ${TB_USER} -c "
@@ -910,6 +949,9 @@ echo "${LINE_MODULE}"
 }
 
 function_archive_copy(){
+# function_archive_copy(){...}
+#
+#
 echo "## Archive Log Copy Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 ARC_BEGIN_END_LIST=`su - ${TB_USER} -c "
@@ -934,6 +976,9 @@ echo "${LINE_MODULE}"
 # Log Switch
 ####################################################
 function_log_switch(){
+# function_log_switch(){...}
+#
+#
 echo "## Log Switch Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 LOG_SWITCH_CYCLE_NUMBER=1
@@ -963,6 +1008,10 @@ echo "${LINE_MODULE}"
 # tbrmgr
 ####################################################
 function_tbrmgr(){
+# function_tbrmgr(){...}
+#
+#
+
 # tbrmgr options setting
 #-----------------------------------------------------------------------
 TBRMGR_OPTIONS=""
@@ -1002,8 +1051,10 @@ echo "${LINE_MODULE}"
 # EPA Libraries Backup
 ####################################################
 function_backup_epa(){
-    echo "EPA Backup"
-echo "## Archive Log Copy Start: `date +%Y-%m-%d\ %T`"
+# function_backup_epa(){...}
+# 개발 중
+#
+echo "## EPA Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 EPA_LISTS=`su - ${TB_USER} -c "
 tbsql ${DB_USER}/${DB_PASS} -s <<EOF
@@ -1011,11 +1062,35 @@ set pagesize 0
 set feedback off
 select library_name from dba_libraries;
 EOF"`
+echo "${LINE_MODULE}"
+echo "## EPA Backup End: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
 }
+
+####################################################
+# EPA Libraries Backup
+####################################################
+function_backup_passwd_file(){
+# function_backup_passwd_file(){...}
+# 개발 중
+#
+echo "## .passwd File Backup Start: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
+
+echo "개발 중"
+
+echo "${LINE_MODULE}"
+echo "## .passwd File Backup End: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
+}
+
 ####################################################
 # Script Start Message
 ####################################################
 function_script_start(){
+# function_script_start(){...}
+#
+#
 echo "${LINE_HEAD}"
 echo "# tibero_backup.sh Script Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_HEAD}"
@@ -1025,6 +1100,9 @@ echo "${LINE_HEAD}"
 # Script End Message
 ####################################################
 functipn_script_end(){
+# functipn_script_end(){...}
+#
+#
 echo "${LINE_HEAD}"
 echo "# tibero_backup.sh Script End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_HEAD}"
@@ -1033,8 +1111,16 @@ echo "${LINE_HEAD}"
 ####################################################
 # Main
 ####################################################
-function_main(){  
+function_main(){ 
+# function_main(){...}
+#
+#
+
     function_backup_database(){
+        # function_backup_database(){
+        #
+        #
+
         # begin/end backup
         if [ "N" == "${BACKUP_TBRMGR}" ]
         then
@@ -1067,6 +1153,7 @@ function_main(){
             functipn_script_end
         fi
     }
+
     function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
     funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null
     function_backup_database 1>>${LOG_SCIPRT} 2>/dev/null
