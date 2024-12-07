@@ -14,7 +14,7 @@
 ####################################################
 # User Settings.
 #-----------------------------------------------------------------------
-# Backup Remove Day (default 1day)
+# Backup Remove Day (default 1, empty or 0: Not remove)
 BACKUP_REMOVE_DAY=1
 
 # Backup Store Type (Y or N)
@@ -22,8 +22,8 @@ BACKUP_FILESYSTEM=Y
 BACKUP_TAS=N
 
 # Backup Method (Y or N)
-BACKUP_BEGINEND=N
-BACKUP_TBRMGR=Y
+BACKUP_BEGINEND=Y
+BACKUP_TBRMGR=N
 
 # Backup Directory
 WORK_DIR=/root/work/backup
@@ -68,8 +68,6 @@ BACKUP_CTL_NORESETLOGS="${BACKUP_CTL_DIR}"/control_noresetlogs.ctl.bak
 BACKUP_CTL_RESETLOGS="${BACKUP_CTL_DIR}"/control_resetlogs.ctl.bak
 BACKUP_CONFIG="${BACKUP_CONFIG_DIR}"/tibero_config.bak
 BACKUP_EPA_DIR="${BACKUP_DIR}"/backup_epa
-
-
 META_FILE="${BACKUP_META_DIR}"/datafile.log
 META_TABLESPACE="${BACKUP_META_DIR}"/tablespace.log
 BACKUP_META_DIR="${BACKUP_DIR}"/log/meta
@@ -91,12 +89,19 @@ LINE_MODULE="-------------------------------------------------------------------
 # Sciprt Error Check
 ####################################################
 function_error(){
+# function_error(){...}
+#   - 스크립트를 구성하는 부분에서 기본적으로 동작되어야 하는 매개변수를 확인
+#   - ERROR_FLAG가 최종적으로 N이 유지되면 스크립트 수행
+#   - ERROR_FLAG가 최종적으로 Y가 유지되면 스크립트 종료
+#
 ERROR_FLAG=N
 echo "## Error Check Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 
 # Script Paramter Checking
 #-----------------------------------------------------------------------
+
+# 티베로 엔진 유저 및 티베로 홈 확인
 if [ -z "${TB_USER}" ] || [ -z "${TB_HOME}" ] 
 then
     ERROR_FLAG=Y
@@ -109,6 +114,7 @@ else
     echo "   - TB_HOME: ${TB_HOME}"
 fi
 
+# 백업 수행 관련 경로 확인
 if [ -z "$ARCH_DIR" ] || [ -z "${WORK_DIR}" ]
 then
     ERROR_FLAG=Y
@@ -123,6 +129,7 @@ else
     echo "   - ARCH_DIR  : ${ARCH_DIR}"
 fi
 
+# 티베로 접속 유저/암호 확인
 if [ -z "${DB_USER}" ] || [ -z "${DB_PASS}" ]
 then
     ERROR_FLAG=Y
@@ -268,11 +275,11 @@ select 'ACTIVE' from _vt_backup where status = 1 and rownum = 1;
 EOF
 "`
 
-if [ "ACTIVE" == "${TB_BACKUP_CHK}" ] && [ "N" == "${BACKUP_BEGINEND_STATE_IGRNORE}" ]
+if [ "ACTIVE" == "${TB_BACKUP_CHK}" ] && [ "N" == "${BACKUP_BEGINEND_STATE_IGRNORE}" ] || [ "CONN" != "${TB_CONN_CHK}" ]
 then
     ERROR_FLAG=Y
     echo "  ERROR - Tibero Backup Checking."
-    echo "    - Backup Active State."
+    echo "    - Backup Active State or Not Connected."
 elif [ "ACTIVE" == "${TB_BACKUP_CHK}" ] && [ "Y" == "${BACKUP_BEGINEND_STATE_IGRNORE}" ]
 then
     echo "  SUCCESS - Tibero Backup Checking."
@@ -300,6 +307,10 @@ fi
 # Script Meta Generation
 ####################################################
 function_meta_getting(){
+# function_meta_getting(){...}
+#   - 테이블 스페이스 명칭과 데이터 파일들의 경로를 확인
+#   - 해당 정보를 파일로 쓰지 않으면 정보를 가공되지 않아 파일로 작성
+#
 echo "## Backup Meta Getting Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 echo "  - \$BACKUP_DIR=${BACKUP_DIR}"
@@ -340,6 +351,11 @@ echo "${LINE_MODULE}"
 # 
 ####################################################
 function_script_options(){
+# function_script_options(){...}
+#   - 스크립트에 사용되는 설정 매개변수를 확인
+#   - 백업 오류 발생 시 검토되어야하는 정보들 기록
+#
+
 # Sciprt Parameter
 #-----------------------------------------------------------------------
 su - ${TB_USER} -c "echo"
@@ -714,34 +730,34 @@ EOF
 # Backup Remove Day
 ####################################################
 function_backup_remove(){
-
 if [ -z "${BACKUP_REMOVE_DAY}" ] || [ "0" == "${BACKUP_REMOVE_DAY}" ]
 then
-    continue
+    return
 fi
+echo "## Backup Remove Start: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
 
-if [ -z "${BACKUP_REMOVE_DAY}" ]
-then
-    continue
-fi
-
-
-BACKUP_DAY=`echo $BACKUP_TIME |awk -F _ '{print $1}'`
-BACKUP_REMOVE_DAY=`echo ${BACKUP_TIME} - ${BACKUP_REMOVE_DAY} |bc`
-for ... in ..
+BACKUP_DAY=`echo ${BACKUP_TIME} |awk -F _ '{print $1}'`
+BACKUP_REMOVE_LIMIT_DAY=`echo ${BACKUP_DAY} - ${BACKUP_REMOVE_DAY} |bc`
+BACKUP_DAY_LIST=(`ls -rlt ${WORK_DIR} |awk '{print $NF}' |grep  -E '^[0-9]{6}_' |sort`)
+echo "  - Backup Retention Days: ${BACKUP_REMOVE_DAY}"
+echo "  - Backup Current Day: ${BACKUP_DAY}"
+echo "  - Backup Retention Limit Day: ${BACKUP_REMOVE_LIMIT_DAY}"
+for BACKUP_DAY_VAR in ${BACKUP_DAY_LIST[@]}
 do
-su - ${TB_USER} -c "
-rm -rf ${BACKUP_REMOVE_DAY}_*
-"
-
-if [ "${BACKUP_CYCLE_DAY}" == "${BACKUP_DAY}" ]
+BACKUP_REMOVE_NAME=`echo ${BACKUP_DAY_VAR} |awk -F _ '{print $1}'`
+if [ "${BACKUP_REMOVE_NAME}" -lt "${BACKUP_REMOVE_LIMIT_DAY}" ]
 then
-
+echo "  - Backup Remove Directory Name: ${BACKUP_DAY_VAR}"
+rm -rf ${BACKUP_DAY_VAR}
 fi
-
 done
 
+echo "${LINE_MODULE}"
+echo "##  Backup Remove End: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
 }
+
 ####################################################
 # Controlfile Generation
 ####################################################
