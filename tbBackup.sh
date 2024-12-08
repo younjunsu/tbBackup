@@ -620,7 +620,7 @@ echo
 
 function_collection_backup_status_prev(){
 # function_collection_backup_status_prev(){...}
-#
+#   - 백업 전 정보를 기록하는 로그 처리 함수
 #
 echo "${LINE_HEAD}"
 echo "# Collection Log Prev Backup Status"
@@ -684,7 +684,7 @@ EOF
 
 function_collection_backup_status_post(){
 # function_collection_backup_status_post(){...}
-#
+#   - 백업 후 정보를 기록하는 로그 처리 함수
 #
 echo "${LINE_HEAD}"
 echo "# Collection Log Post Backup Status"
@@ -751,7 +751,7 @@ EOF
 ####################################################
 function_backup_remove(){
 # function_backup_remove(){...}
-#
+#   - 이전 백업 본 삭제 처리를 하는 함수
 #
 if [ -z "${BACKUP_REMOVE_DAY}" ] || [ "0" == "${BACKUP_REMOVE_DAY}" ]
 then
@@ -786,7 +786,8 @@ echo "${LINE_MODULE}"
 ####################################################
 function_controlfile_backup(){
 # function_controlfile_backup(){...}
-#
+#   - 컨트롤 파일 백업 처리
+#   - noresetlogs와 resetlogs 컨트롤 팡리 모두 생성
 #
 echo "## Controlfile Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -813,7 +814,7 @@ echo "${LINE_MODULE}"
 ####################################################
 function_begin_backup(){
 # function_begin_backup(){...}
-#
+#   - 백업 BEGIN 상태 처리 함수
 #
 echo "## Tablespace Begin Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -837,7 +838,7 @@ echo "${LINE_MODULE}"
 ####################################################
 function_tablespace_filecopy_filesystem(){
 # function_tablespace_filecopy_filesystem(){...}
-#
+#   - 백업 중인 데이터 파일을 복제하는 함수
 #
 if [ "Y" == "${BACKUP_FILESYSTEM}" ] && [ "N" == "${BACKUP_TAS}" ]
 then
@@ -864,7 +865,7 @@ fi
 ####################################################
 function_tablespace_filecopy_tas(){
 # function_tablespace_filecopy_tas(){...}
-#
+#   - 백업 중인 데이터 파일(TAS)을 복제하는 함수
 #
 if [ "N" == "${BACKUP_FILESYSTEM}" ] && [ "Y" == "${BACKUP_TAS}" ]
 then
@@ -892,7 +893,7 @@ fi
 ####################################################
 function_end_backup(){
 # function_end_backup(){...}
-#
+#   - 백업 완료 처리하는 함수
 #
 echo "## Tablespace End Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -915,7 +916,7 @@ echo "${LINE_MODULE}"
 ####################################################
 function_archive_begin(){
 # function_archive_begin(){...}
-#
+#   - 백업 전의 아카이브 상태 처리
 #
 echo "## Archive Begin Sequence Number Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -935,7 +936,7 @@ echo "${LINE_MODULE}"
 
 function_archive_end(){
 # function_archive_end(){...}
-#
+#   - 백업 후의 아카이브 상태 처리 함수
 #
 echo "## Archive End Sequence Number Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -955,7 +956,7 @@ echo "${LINE_MODULE}"
 
 function_archive_copy(){
 # function_archive_copy(){...}
-#
+#   - 백업 SQL 문장이 들어있는 아카이브 로그 복제 함수
 #
 echo "## Archive Log Copy Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
