@@ -35,7 +35,7 @@ BACKUP_TBRMGR=N
 BACKUP_PASSWD_FILE=Y
 
 # More Backup (Y or N)
-BACKUP_EPA=N
+BACKUP_EPA=Y
 BACKUP_EXTERNAL_TABLE=Y
 BACKUP_DIRECTORY_OBJECT=N
 
@@ -95,7 +95,6 @@ su - ${TB_USER} -c "mkdir -p "${BACKUP_META_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CTL_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_DATAFILE_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CONFIG_DIR}""
-su - ${TB_USER} -c "mkdir -p "${BACKUP_EPA_DIR}""
 
 LINE_HEAD="#################################################################################"
 LINE_MODULE="---------------------------------------------------------------------------------"
@@ -1072,18 +1071,29 @@ echo "${LINE_MODULE}"
 ####################################################
 function_backup_epa(){
 # function_backup_epa(){...}
-# 개발 중
+#   - External Procedure 백업 함수
 #
-if [ "Y" == "${BACKUP_EPA}"]
+
+if [ "Y" == "${BACKUP_EPA}" ] 
 then
 echo "## EPA Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
-EPA_LISTS=`su - ${TB_USER} -c "
+
+su - ${TB_USER} -c "mkdir -p "${BACKUP_EPA_DIR}""
+
+EPA_LIST=`su - ${TB_USER} -c "
 tbsql ${DB_USER}/${DB_PASS} -s <<EOF
 set pagesize 0
 set feedback off
-select library_name from dba_libraries;
+select file_spec from dba_libraries;
 EOF"`
+
+for EPA_FILE in ${EPA_LIST[@]}
+do
+    echo "  - EPA FILE: ${EPA_FILE}"
+    cp -rp ${EPA_FILE} ${BACKUP_EPA_DIR}
+done
+
 echo "${LINE_MODULE}"
 echo "## EPA Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -1100,17 +1110,15 @@ function_backup_passwd_file(){
 echo "## .passwd File Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 
-echo "개발 중"
-
 PASSWD_FILE=`su - ${TB_USER} -c "
 tbsql ${DB_USER}/${DB_PASS} -s <<EOF
 set pagesize 0
 set feedback off
-select name from vt_parameter where name = 'DB_CREATE_FILE_DEST';
+select value||'/.passwd' from vt_parameter where name = 'DB_CREATE_FILE_DEST';
 EOF
 "`
 
-cp -rp ${PASSWD_FILE} ${BACKUP_CONFIG_DIR}
+cp -rp ${PASSWD_FILE} ${BACKUP_CONFIG_DIR}/sys_passwd
 
 echo "${LINE_MODULE}"
 echo "## .passwd File Backup End: `date +%Y-%m-%d\ %T`"
@@ -1157,18 +1165,15 @@ echo "${LINE_MODULE}"
 echo "## External Table Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 fi
-
-
-#select * from dba_external_locations;
-#select * from dba_external_tables;
 }
 
 ####################################################
 # Directory Object Backup
 ####################################################
 function_directory_object(){
-# function_external_table(){...}
-#
+# function_directory_object(){...}
+#   - EPA와 EXTERNAL TABLE 백업 함수가 있어서 필요 없을 것으로 판단
+#   - 알지 못하는 용도의 디렉토리가 있을 수 있어 함수 남겨 놓음
 #    
 
 #select path from dba_directories where path not like '@SVR_HOME%';
@@ -1229,7 +1234,9 @@ function_main(){
             function_begin_backup
             function_tablespace_filecopy_filesystem
             function_tablespace_filecopy_tas
+            function_backup_passwd_file
             function_external_table
+            function_backup_epa
             function_end_backup
             function_log_switch
             function_archive_end
