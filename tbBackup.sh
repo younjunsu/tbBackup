@@ -36,7 +36,7 @@ BACKUP_PASSWD_FILE=Y
 
 # More Backup (Y or N)
 BACKUP_EPA=N
-BACKUP_EXTERNAL_TABLE=N
+BACKUP_EXTERNAL_TABLE=Y
 BACKUP_DIRECTORY_OBJECT=N
 
 # Backup Directory
@@ -80,6 +80,7 @@ BACKUP_CTL_DIR="${BACKUP_DIR}"/backup_controlfile
 BACKUP_DATAFILE_DIR="${BACKUP_DIR}"/backup_datafile
 BACKUP_ARCH_DIR="${BACKUP_DIR}"/backup_archive
 BACKUP_EPA_DIR="${BACKUP_DIR}"/backup_epa
+BACKUP_EXTERNAL_TABLE_DIR="${BACKUP_DIR}"/backup_external_table
 BACKUP_CONFIG="${BACKUP_CONFIG_DIR}"/tibero_config.bak
 BACKUP_CTL_NORESETLOGS="${BACKUP_CTL_DIR}"/control_noresetlogs.ctl.bak
 BACKUP_CTL_RESETLOGS="${BACKUP_CTL_DIR}"/control_resetlogs.ctl.bak
@@ -95,10 +96,11 @@ su - ${TB_USER} -c "mkdir -p "${BACKUP_CTL_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_DATAFILE_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CONFIG_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_EPA_DIR}""
+
 LINE_HEAD="#################################################################################"
 LINE_MODULE="---------------------------------------------------------------------------------"
 #-----------------------------------------------------------------------
-# 세부적인 백업 객체 설정 하는 옵션 향후 개발 예정
+# 세부적인 백업 객체 설정 하는 옵션, 향후 개발 예정
 #BACKUP_DATAFILE=Y
 #BACKUP_ARCHIVE=Y
 #BACKUP_CONTROLFILE=Y
@@ -435,7 +437,7 @@ su - ${TB_USER} <<EOF
 echo "${LINE_MODULE}"
 echo "## Tibero Version"
 echo "${LINE_MODULE}"
-tbboot -v
+tbboot -version
 echo
 echo "${LINE_MODULE}"
 echo "## Tibero License"
@@ -1072,6 +1074,8 @@ function_backup_epa(){
 # function_backup_epa(){...}
 # 개발 중
 #
+if [ "Y" == "${BACKUP_EPA}"]
+then
 echo "## EPA Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 EPA_LISTS=`su - ${TB_USER} -c "
@@ -1083,6 +1087,7 @@ EOF"`
 echo "${LINE_MODULE}"
 echo "## EPA Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+fi
 }
 
 ####################################################
@@ -1097,6 +1102,16 @@ echo "${LINE_MODULE}"
 
 echo "개발 중"
 
+PASSWD_FILE=`su - ${TB_USER} -c "
+tbsql ${DB_USER}/${DB_PASS} -s <<EOF
+set pagesize 0
+set feedback off
+select name from vt_parameter where name = 'DB_CREATE_FILE_DEST';
+EOF
+"`
+
+cp -rp ${PASSWD_FILE} ${BACKUP_CONFIG_DIR}
+
 echo "${LINE_MODULE}"
 echo "## .passwd File Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -1107,9 +1122,42 @@ echo "${LINE_MODULE}"
 ####################################################
 function_external_table(){
 # function_external_table(){...}
+#   - EXTERNAL TABLE 백업하는 함수
+#   - 기본적으로 사용되지 않지만 필요에 의해서 사용할 수 있음
+#   - EXTERNAL TABLE의 경우 TIBERO에서 시점 복원을 보장하지 않음
 #
-#
-echo "개발 중"
+if [ "Y" == "${BACKUP_EXTERNAL_TABLE}" ]
+then
+echo "## External Table Backup Start: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
+su - ${TB_USER} -c "mkdir -p "${BACKUP_EXTERNAL_TABLE_DIR}""
+
+EXTERNAL_TABLE_LIST=`su - ${TB_USER} -c "
+tbsql ${DB_USER}/${DB_PASS} -s <<EOF
+set pagesize 0
+set feedback off
+
+SELECT
+	dd.PATH||'/'||del.location
+FROM
+	dba_directories dd,
+	dba_external_locations del
+WHERE
+	dd.name = del.directory_name;
+EOF
+"`
+
+for EXTERNAL_TABLE_FILE in ${EXTERNAL_TABLE_LIST[@]}
+do
+    echo "  - External Table: ${EXTERNAL_TABLE_FILE}"
+    cp -rp ${EXTERNAL_TABLE_FILE} ${BACKUP_EXTERNAL_TABLE_DIR}
+done
+
+echo "${LINE_MODULE}"
+echo "## External Table Backup End: `date +%Y-%m-%d\ %T`"
+echo "${LINE_MODULE}"
+fi
+
 
 #select * from dba_external_locations;
 #select * from dba_external_tables;
@@ -1181,6 +1229,7 @@ function_main(){
             function_begin_backup
             function_tablespace_filecopy_filesystem
             function_tablespace_filecopy_tas
+            function_external_table
             function_end_backup
             function_log_switch
             function_archive_end
