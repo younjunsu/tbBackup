@@ -1025,7 +1025,7 @@ echo "${LINE_MODULE}"
 ####################################################
 function_tbrmgr(){
 # function_tbrmgr(){...}
-#
+#   - tbrmgr 백업 도구를 이용한 백업 수행 함수
 #
 
 # tbrmgr options setting
@@ -1052,6 +1052,8 @@ echo "${LINE_MODULE}"
 echo "  - TBRMGR Backup Options: ${TBRMGR_OPTIONS}"
 # tbrmgr running
 #-----------------------------------------------------------------------
+#   - T6와 T7의 버전 차이가 있을 수 있어, 최대한 호환되도록 수정
+#
 su - ${TB_USER} -c "
 tbrmgr backup -s -v  -o ${BACKUP_DATAFILE_DIR} ${TBRMGR_OPTIONS} 
 "
@@ -1088,7 +1090,7 @@ echo "${LINE_MODULE}"
 ####################################################
 function_backup_passwd_file(){
 # function_backup_passwd_file(){...}
-# 개발 중
+#   - tbrmgr 백업이 아닌 BEGIN/END 백업 방식의 경우 같이 받아지도록 하는 함수
 #
 echo "## .passwd File Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -1107,6 +1109,7 @@ function_external_table(){
 # function_external_table(){...}
 #
 #
+echo "개발 중"
 
 #select * from dba_external_locations;
 #select * from dba_external_tables;
@@ -1121,6 +1124,7 @@ function_directory_object(){
 #    
 
 #select path from dba_directories where path not like '@SVR_HOME%';
+echo "개발 중"
 
 }
 
@@ -1130,7 +1134,7 @@ function_directory_object(){
 ####################################################
 function_script_start(){
 # function_script_start(){...}
-#
+#   - 스크립트 시작 메시지 함수
 #
 echo "${LINE_HEAD}"
 echo "# tibero_backup.sh Script Start: `date +%Y-%m-%d\ %T`"
@@ -1142,7 +1146,7 @@ echo "${LINE_HEAD}"
 ####################################################
 functipn_script_end(){
 # functipn_script_end(){...}
-#
+#   - 스크립트 종료 메시지 함수
 #
 echo "${LINE_HEAD}"
 echo "# tibero_backup.sh Script End: `date +%Y-%m-%d\ %T`"
@@ -1154,12 +1158,13 @@ echo "${LINE_HEAD}"
 ####################################################
 function_main(){ 
 # function_main(){...}
-#
+#   - 백업 스크립트 수행되는 메인 스크립트
+#   - 백업 수행, 로그 수집 함수를 호출
 #
 
     function_backup_database(){
         # function_backup_database(){
-        #
+        #   - 데이터베이스의 백업 수행
         #
 
         # begin/end backup
@@ -1195,6 +1200,7 @@ function_main(){
         fi
     }
 
+    # 백업 수행 관련 메시지성 로그 기록
     function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
     funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null
     function_backup_database 1>>${LOG_SCIPRT} 2>/dev/null
