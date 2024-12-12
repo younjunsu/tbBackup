@@ -872,6 +872,7 @@ function_tablespace_filecopy_tas(){
 # function_tablespace_filecopy_tas(){...}
 #   - 백업 중인 데이터 파일(TAS)을 복제하는 함수
 #
+#
 if [ "N" == "${BACKUP_FILESYSTEM}" ] && [ "Y" == "${BACKUP_TAS}" ]
 then
 echo "## Tablespace FileCopy (TAS) Start: `date +%Y-%m-%d\ %T`"
@@ -884,7 +885,8 @@ cptolocal ${DATAFILE_NAME} ${BACKUP_DATAFILE_DIR}
 EOF
 done
 
-BACKUP_DATAFILE_META=`echo `ls ${BACKUP_DATAFILE_DIR}``
+
+BACKUP_DATAFILE_META=(`ls ${BACKUP_DATAFILE_DIR}`)
 echo "  - File Copy List"
 echo ${BACKUP_DATAFILE_META[@]}
 echo "${LINE_MODULE}"
@@ -988,7 +990,8 @@ echo "${LINE_MODULE}"
 ####################################################
 function_log_switch(){
 # function_log_switch(){...}
-#
+#   - 백업 이후 생성된 아카이브
+#   - 백업 BEGINE/END 문장이 담긴 SQL 복제하기 위해 스위치 하는 함수
 #
 echo "## Log Switch Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -1100,6 +1103,7 @@ function_backup_passwd_file(){
 # function_backup_passwd_file(){...}
 #   - tbrmgr 백업이 아닌 BEGIN/END 백업 방식의 경우 같이 받아지도록 하는 함수
 #
+
 echo "## .passwd File Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 
@@ -1217,6 +1221,8 @@ echo " "
 echo "  [option2]"
 echo "      beginend"
 echo "      tbrmgr"
+# 아카이브 백업 모드 구현 중
+#echo "      archive"
 echo "-------------------------------------------------"
 
 }
