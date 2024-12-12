@@ -23,21 +23,12 @@
 # Backup Remove Day (default 1, empty or 0: Not remove)
 BACKUP_REMOVE_DAY=1
 
-# Backup Store Type (Y or N)
-BACKUP_FILESYSTEM=Y
-BACKUP_TAS=N
-
-# Backup Method (Y or N)
-BACKUP_BEGINEND=Y
-BACKUP_TBRMGR=N
-
 # Backup .passwd (Y or N)
 BACKUP_PASSWD_FILE=Y
 
 # More Backup (Y or N)
-BACKUP_EPA=Y
-BACKUP_EXTERNAL_TABLE=Y
-BACKUP_DIRECTORY_OBJECT=N
+BACKUP_EPA=N
+BACKUP_EXTERNAL_TABLE=N
 
 # Backup Directory
 WORK_DIR=/root/work/backup
@@ -66,11 +57,18 @@ TBRMGR_INCREMENTAL_BACKUP=N
 TBRMGR_COMPRESS=N
 TBRMGR_WITH_ARCHIVELOG=Y
 TBRMGR_WITH_PASSWORD_FILE=Y
+
+# 세부적인 백업 객체 설정 하는 옵션, 개발 예정
+#BACKUP_DATAFILE=Y
+#BACKUP_ARCHIVE=Y
+#BACKUP_CONTROLFILE=Y
+#BACKUP_ENGINE=Y
+#BACKUP_DIRECTORY_OBJECT=N
 #-----------------------------------------------------------------------
 
 # Do Not Change
 #-----------------------------------------------------------------------
-SCRIPT_NAME=${0}
+function_init(){
 BACKUP_TIME=`date +%y%m%d_%H%M`
 BACKUP_DIR="${WORK_DIR}"/"${BACKUP_TIME}"
 BACKUP_LOG_DIR="${BACKUP_DIR}"/log
@@ -95,15 +93,10 @@ su - ${TB_USER} -c "mkdir -p "${BACKUP_META_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CTL_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_DATAFILE_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CONFIG_DIR}""
+}
 
 LINE_HEAD="#################################################################################"
 LINE_MODULE="---------------------------------------------------------------------------------"
-#-----------------------------------------------------------------------
-# 세부적인 백업 객체 설정 하는 옵션, 향후 개발 예정
-#BACKUP_DATAFILE=Y
-#BACKUP_ARCHIVE=Y
-#BACKUP_CONTROLFILE=Y
-#BACKUP_ENGINE=Y
 #-----------------------------------------------------------------------
 ####################################################
 # Sciprt Error Check
@@ -401,7 +394,7 @@ echo "   - ARCH_DIR: ${ARCH_DIR}"
 echo "   - TB_USER: ${TB_USER}"
 echo "   - TB_HOME: ${TB_HOME}"
 echo "   - DB_USER: ${DB_USER}"
-# 보안상 비활성화 (디버깅 필요에만 활성화)
+# 보안으로 비활성화 (디버깅 필요에만 활성화)
 #echo "   - DB_PASS: ${DB_PASS}"
 #-----------------------------------------------------------------------
 echo "   - BACKUP_TIME: ${BACKUP_TIME}"
@@ -798,7 +791,7 @@ echo "${LINE_MODULE}"
 function_controlfile_backup(){
 # function_controlfile_backup(){...}
 #   - 컨트롤 파일 백업 처리
-#   - noresetlogs와 resetlogs 컨트롤 팡리 모두 생성
+#   - noresetlogs와 resetlogs 컨트롤 파일 모두 생성
 #
 echo "## Controlfile Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -855,10 +848,11 @@ if [ "Y" == "${BACKUP_FILESYSTEM}" ] && [ "N" == "${BACKUP_TAS}" ]
 then
 echo "## Tablespace FileCopy (FileSystem) Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+
 DATAFILE_LIST=`cat ${META_FILE}`
 for DATAFILE_NAME in ${DATAFILE_LIST[@]}
 do
-    echo "  - Datafile Copy: ${file_name}"
+    echo "  - Datafile Copy: ${DATAFILE_NAME}"
     cp ${DATAFILE_NAME} ${BACKUP_DATAFILE_DIR}
 done
 
@@ -1027,6 +1021,7 @@ echo "${LINE_MODULE}"
 function_tbrmgr(){
 # function_tbrmgr(){...}
 #   - tbrmgr 백업 도구를 이용한 백업 수행 함수
+#   - T6와 T7의 버전 차이가 있어, 최대한 호환되도록 수정
 #
 
 # tbrmgr options setting
@@ -1053,8 +1048,6 @@ echo "${LINE_MODULE}"
 echo "  - TBRMGR Backup Options: ${TBRMGR_OPTIONS}"
 # tbrmgr running
 #-----------------------------------------------------------------------
-#   - T6와 T7의 버전 차이가 있을 수 있어, 최대한 호환되도록 수정
-#
 su - ${TB_USER} -c "
 tbrmgr backup -s -v  -o ${BACKUP_DATAFILE_DIR} ${TBRMGR_OPTIONS} 
 "
@@ -1132,7 +1125,7 @@ function_external_table(){
 # function_external_table(){...}
 #   - EXTERNAL TABLE 백업하는 함수
 #   - 기본적으로 사용되지 않지만 필요에 의해서 사용할 수 있음
-#   - EXTERNAL TABLE의 경우 TIBERO에서 시점 복원을 보장하지 않음
+#   - EXTERNAL TABLE의 경우 시점 복원을 보장하지 않음
 #
 if [ "Y" == "${BACKUP_EXTERNAL_TABLE}" ]
 then
@@ -1173,12 +1166,10 @@ fi
 function_directory_object(){
 # function_directory_object(){...}
 #   - EPA와 EXTERNAL TABLE 백업 함수가 있어서 필요 없을 것으로 판단
-#   - 알지 못하는 용도의 디렉토리가 있을 수 있어 함수 남겨 놓음
+#   - 알지 못하는 용도의 디렉토리가 있을 수 있어 남겨 놓음
 #    
-
+    echo 2>/dev/null
 #select path from dba_directories where path not like '@SVR_HOME%';
-echo "개발 중"
-
 }
 
 
@@ -1207,6 +1198,30 @@ echo "${LINE_HEAD}"
 }
 
 ####################################################
+# help
+####################################################
+function_help(){
+# function_help(){...}
+#   - 사용법 안내 메시지
+#
+
+echo "-------------------------------------------------"
+echo "${SCRIPT_NAME}: Tibero Backup Sample Sciprt"
+echo "-------------------------------------------------"
+echo "usage: sh ${SCRIPT_NAME} [option1] [option2]"
+echo ""
+echo "  [option1]"
+echo "      filesystem"
+echo "      tas"
+echo " "
+echo "  [option2]"
+echo "      beginend"
+echo "      tbrmgr"
+echo "-------------------------------------------------"
+
+}
+
+####################################################
 # Main
 ####################################################
 function_main(){ 
@@ -1214,6 +1229,36 @@ function_main(){
 #   - 백업 스크립트 수행되는 메인 스크립트
 #   - 백업 수행, 로그 수집 함수를 호출
 #
+
+    # 스크립트 이름 확인
+    SCRIPT_NAME=${0}
+
+    # option1 사용자 입력 처리
+    if [ "filesystem" == "${OPTION1}" ]
+    then
+        BACKUP_FILESYSTEM=Y
+    elif [ "tas" == "${OPTION1}" ]
+    then
+        BACKUP_TAS=Y    
+    else
+        function_help
+        exit
+    fi
+
+    # option2 사용자 입력 처리
+    if [ "beginend" == "${OPTION2}" ] 
+    then
+        BACKUP_BEGINEND=Y
+    elif [ "tbrmgr" == "${OPTION2}" ]
+    then
+        BACKUP_TBRMGR=Y
+    else
+        function_help
+        exit
+    fi
+
+    # 스크립트 초기 설정 함수 수행
+    function_init
 
     function_backup_database(){
         # function_backup_database(){
@@ -1252,11 +1297,14 @@ function_main(){
             function_backup_remove
             function_controlfile_backup
             function_tbrmgr
+            function_backup_passwd_file
+            function_external_table
+            function_backup_epa
             functipn_script_end
         fi
     }
 
-    # 백업 수행 관련 메시지성 로그 기록
+    # 백업 수행 관련 메시지 로그 기록
     function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
     funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null
     function_backup_database 1>>${LOG_SCIPRT} 2>/dev/null
@@ -1266,6 +1314,9 @@ function_main(){
 ####################################################
 # Script Call
 ####################################################
+# 사용자 입력이 없으면 help 수행
+OPTION1=$1
+OPTION2=$2
 
 function_main
 
