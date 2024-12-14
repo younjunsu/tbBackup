@@ -516,6 +516,40 @@ tbsql ${DB_USER}/${DB_PASS} -s <<EOF
 select * from dba_libraries;
 EOF
 "
+#-----------------------------------------------------------------------
+
+# Tibero dba_directories
+#-----------------------------------------------------------------------
+echo "${LINE_MODULE}"
+echo "## dba_directories"
+echo "${LINE_MODULE}"
+su - ${TB_USER} -c "
+tbsql ${DB_USER}/${DB_PASS} -s <<EOF
+select * from dba_directories;
+EOF
+"
+#-----------------------------------------------------------------------
+
+# Tibero External Tables
+#-----------------------------------------------------------------------
+echo "${LINE_MODULE}"
+echo "## dba_external_locations"
+echo "${LINE_MODULE}"
+su - ${TB_USER} -c "
+tbsql ${DB_USER}/${DB_PASS} -s <<EOF
+select * from dba_external_locations;
+EOF
+"
+
+echo "${LINE_MODULE}"
+echo "## dba_external_tables"
+echo "${LINE_MODULE}"
+su - ${TB_USER} -c "
+tbsql ${DB_USER}/${DB_PASS} -s <<EOF
+select * from dba_external_tables;
+EOF
+"
+#-----------------------------------------------------------------------
 
 # Tibero File List
 #-----------------------------------------------------------------------
@@ -1321,6 +1355,8 @@ function_main(){
 # Script Call
 ####################################################
 # 사용자 입력이 없으면 help 수행
+#   OPTIONS1: 데이터파일 저장 방식
+#   OPTIONS2: 백업 방식 
 OPTION1=$1
 OPTION2=$2
 
