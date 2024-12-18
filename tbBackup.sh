@@ -23,11 +23,20 @@
 # Backup Remove Day (default 1, empty or 0: Not remove)
 BACKUP_REMOVE_DAY=1
 
+# Recommand Backup
+BACKUP_ENGINE=Y
+BACKUP_CONTROLFILE=Y
+BACKUP_DATAFILE=Y
+
 # Backup .passwd (Y or N)
 BACKUP_PASSWD_FILE=Y
 
+# Backup Only Archive Backup (Y or N)
+BACKUP_ARCHIVE=N
+
 # More Backup (Y or N)
 BACKUP_EPA=N
+BACKUP_DIRECTORY_OBJECT=N
 BACKUP_EXTERNAL_TABLE=N
 
 # Backup Directory
@@ -57,13 +66,6 @@ TBRMGR_INCREMENTAL_BACKUP=N
 TBRMGR_COMPRESS=N
 TBRMGR_WITH_ARCHIVELOG=Y
 TBRMGR_WITH_PASSWORD_FILE=Y
-
-# 세부적인 백업 객체 설정 하는 옵션, 개발 예정
-#BACKUP_DATAFILE=Y
-#BACKUP_ARCHIVE=Y
-#BACKUP_CONTROLFILE=Y
-#BACKUP_ENGINE=Y
-#BACKUP_DIRECTORY_OBJECT=N
 #-----------------------------------------------------------------------
 
 # Do Not Change
@@ -827,6 +829,10 @@ function_controlfile_backup(){
 #   - 컨트롤 파일 백업 처리
 #   - noresetlogs와 resetlogs 컨트롤 파일 모두 생성
 #
+
+if [ "Y" == "${BACKUP_CONTROLFILE}" ]
+then
+
 echo "## Controlfile Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 echo "  - Controfile (noresetlogs) Path: ${BACKUP_CTL_NORESETLOGS}"
@@ -844,6 +850,8 @@ EOF
 echo "${LINE_MODULE}"
 echo "## Controlfile Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+
+fi
 }
 
 
@@ -854,6 +862,9 @@ function_begin_backup(){
 # function_begin_backup(){...}
 #   - 백업 BEGIN 상태 처리 함수
 #
+
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
 echo "## Tablespace Begin Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 echo "  - Tablespace Name : `echo ${META_TABLESPACE[@]}`"
@@ -869,6 +880,7 @@ done
 echo "${LINE_MODULE}"
 echo "## Tablespace Begin Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+fi
 }
 
 ####################################################
@@ -878,7 +890,10 @@ function_tablespace_filecopy_filesystem(){
 # function_tablespace_filecopy_filesystem(){...}
 #   - 백업 중인 데이터 파일을 복제하는 함수
 #
-if [ "Y" == "${BACKUP_FILESYSTEM}" ] && [ "N" == "${BACKUP_TAS}" ]
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+
+if [ "Y" == "${BACKUP_FILESYSTEM}" ]
 then
 echo "## Tablespace FileCopy (FileSystem) Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -891,12 +906,16 @@ do
 done
 
 BACKUP_DATAFILE_DIR_META=`ls ${BACKUP_DATAFILE_DIR}`
-echo "  - File Copy List"
-echo ${BACKUP_DATAFILE_META[@]}
+
 echo "${LINE_MODULE}"
 echo "## Tablespace FileCopy (FileSystem) End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+
 fi
+    
+fi
+
+
 }
 
 ####################################################
@@ -907,7 +926,11 @@ function_tablespace_filecopy_tas(){
 #   - 백업 중인 데이터 파일(TAS)을 복제하는 함수
 #
 #
-if [ "N" == "${BACKUP_FILESYSTEM}" ] && [ "Y" == "${BACKUP_TAS}" ]
+
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+
+if [ "Y" == "${BACKUP_TAS}" ]
 then
 echo "## Tablespace FileCopy (TAS) Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
@@ -927,6 +950,10 @@ echo "${LINE_MODULE}"
 echo "## Tablespace FileCopy (TAS) End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 fi
+
+fi
+
+
 }
 
 ####################################################
@@ -936,6 +963,9 @@ function_end_backup(){
 # function_end_backup(){...}
 #   - 백업 완료 처리하는 함수
 #
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+
 echo "## Tablespace End Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 tbs_name_var=`cat ${META_TABLESPACE}`
@@ -950,6 +980,9 @@ done
 echo "${LINE_MODULE}"
 echo "## Tablespace End Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+
+fi
+
 }
 
 ####################################################
@@ -959,6 +992,11 @@ function_archive_begin(){
 # function_archive_begin(){...}
 #   - 백업 전의 아카이브 상태 처리
 #
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+
+if [ "Y" == "${BACKUP_ARCHIVE_INCLUDE}" ]
+then 
 echo "## Archive Begin Sequence Number Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 ARC_BEGIN_NUMBER=`su - ${TB_USER} -c "
@@ -972,13 +1010,21 @@ EOF
 echo "  - Archive Log Begin Sequence Nuumber : ${ARC_BEGIN_NUMBER}"
 echo "${LINE_MODULE}"
 echo "## Archive Begin Sequence Number End: `date +%Y-%m-%d\ %T`"
-echo "${LINE_MODULE}"
+echo "${LINE_MODULE}" 
+fi
+
+fi
 }
 
 function_archive_end(){
 # function_archive_end(){...}
 #   - 백업 후의 아카이브 상태 처리 함수
 #
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+
+if [ "Y" == "${BACKUP_ARCHIVE_INCLUDE}" ]
+then 
 echo "## Archive End Sequence Number Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 ARC_END_NUMBER=`su - ${TB_USER} -c "
@@ -993,12 +1039,20 @@ echo "  - Archive Log Begin Sequence Nuumber : ${ARC_END_NUMBER}"
 echo "${LINE_MODULE}"
 echo "## Archive End Sequence Number End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+fi
+
+fi
 }
 
 function_archive_copy(){
 # function_archive_copy(){...}
 #   - 백업 SQL 문장이 들어있는 아카이브 로그 복제 함수
 #
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+
+if [ "Y" == "${BACKUP_ARCHIVE_INCLUDE}" ]
+then 
 echo "## Archive Log Copy Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 ARC_BEGIN_END_LIST=`su - ${TB_USER} -c "
@@ -1016,8 +1070,19 @@ done
 echo "${LINE_MODULE}"
 echo "## Archive Log Copy End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+fi
+
+fi
 }
 
+function_backup_archive(){
+# function_backup_archive(){...}
+#   - 아카이브 로그 일부를 백업하기 위한 함수
+#
+echo "개발 중"
+
+
+}
 
 ####################################################
 # Log Switch
@@ -1027,6 +1092,10 @@ function_log_switch(){
 #   - 백업 이후 생성된 아카이브
 #   - 백업 BEGINE/END 문장이 담긴 SQL 복제하기 위해 스위치 하는 함수
 #
+
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+
 echo "## Log Switch Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 LOG_SWITCH_CYCLE_NUMBER=1
@@ -1050,6 +1119,8 @@ done
 echo "${LINE_MODULE}"
 echo "## Log Switch End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+
+fi
 }
 
 ####################################################
@@ -1060,6 +1131,9 @@ function_tbrmgr(){
 #   - tbrmgr 백업 도구를 이용한 백업 수행 함수
 #   - T6와 T7의 버전 차이가 있어, 최대한 호환되도록 수정
 #
+
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
 
 # tbrmgr options setting
 #-----------------------------------------------------------------------
@@ -1094,6 +1168,8 @@ tbrmgr backup -s -v  -o ${BACKUP_DATAFILE_DIR} ${TBRMGR_OPTIONS}
 echo "${LINE_MODULE}"
 echo "## TBRMGR Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+
+fi
 }
 
 ####################################################
@@ -1138,6 +1214,9 @@ function_backup_passwd_file(){
 #   - tbrmgr 백업이 아닌 BEGIN/END 백업 방식의 경우 같이 받아지도록 하는 함수
 #
 
+if [ "Y" == "${BACKUP_PASSWD_FILE}" ]
+then
+
 echo "## .passwd File Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 
@@ -1151,9 +1230,12 @@ EOF
 
 cp -rp ${PASSWD_FILE} ${BACKUP_CONFIG_DIR}/sys_passwd
 
+echo "  - .passwd File Backup : ${BACKUP_CONFIG_DIR}/sys_passwd"
 echo "${LINE_MODULE}"
 echo "## .passwd File Backup End: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
+
+fi
 }
 
 ####################################################
@@ -1251,6 +1333,7 @@ echo ""
 echo "  [option1]"
 echo "      filesystem"
 echo "      tas"
+echo "      raw # not yet"
 echo " "
 echo "  [option2]"
 echo "      beginend"
@@ -1306,7 +1389,7 @@ function_main(){
         #
 
         # begin/end backup
-        if [ "N" == "${BACKUP_TBRMGR}" ]
+        if [ "Y" == "${BACKUP_BEGINEND}" ]
         then
             
             function_script_start
@@ -1314,15 +1397,15 @@ function_main(){
             function_error
             function_meta_getting
             function_backup_remove
-            function_controlfile_backup
-            function_archive_begin
-            function_begin_backup
+            function_controlfile_backup #CONTROLFILE 
+            function_archive_begin #DATAFILE
+            function_begin_backup #DATAFILE
             function_tablespace_filecopy_filesystem #DATAFILE
             function_tablespace_filecopy_tas #DATAFILE
-            function_backup_passwd_file 
+            function_backup_passwd_file  
             function_external_table
             function_backup_epa
-            function_end_backup
+            function_end_backup #DATAFILE
             function_log_switch
             function_archive_end
             function_archive_copy            
@@ -1335,8 +1418,8 @@ function_main(){
             function_error
             function_meta_getting
             function_backup_remove
-            function_controlfile_backup
-            function_tbrmgr
+            function_controlfile_backup  #CONTROLFILE 
+            function_tbrmgr #DATAFILE
             function_backup_passwd_file
             function_external_table
             function_backup_epa
@@ -1348,6 +1431,7 @@ function_main(){
     function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
     funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null
     function_backup_database 1>>${LOG_SCIPRT} 2>/dev/null
+    #function_backup_database
     function_collection_backup_status_post 1>>${LOG_BACKUP_STATUS_POST} 2>/dev/null
 }
 
