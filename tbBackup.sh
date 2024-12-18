@@ -290,7 +290,7 @@ set pagesize 0
 set feedback off
 select 'CONN' from dual;
 EOF
-"`
+" |grep -o CONN`
 if [ -z "${DB_USER}" ] || [ -z "${DB_PASS}" ]
 then
     ERROR_FLAG=Y
@@ -311,7 +311,7 @@ set pagesize 0
 set feedback off
 select 'ACTIVE' from _vt_backup where status = 1 and rownum = 1;
 EOF
-"`
+" |grep -o ACTIVE`
 
 if [ "ACTIVE" == "${TB_BACKUP_CHK}" ] && [ "N" == "${BACKUP_BEGINEND_STATE_IGRNORE}" ] || [ "CONN" != "${TB_CONN_CHK}" ]
 then
