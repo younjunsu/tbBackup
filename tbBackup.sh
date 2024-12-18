@@ -1317,9 +1317,9 @@ function_main(){
             function_controlfile_backup
             function_archive_begin
             function_begin_backup
-            function_tablespace_filecopy_filesystem
-            function_tablespace_filecopy_tas
-            function_backup_passwd_file
+            function_tablespace_filecopy_filesystem #DATAFILE
+            function_tablespace_filecopy_tas #DATAFILE
+            function_backup_passwd_file 
             function_external_table
             function_backup_epa
             function_end_backup
