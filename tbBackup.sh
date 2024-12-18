@@ -24,7 +24,6 @@
 BACKUP_REMOVE_DAY=1
 
 # Recommand Backup
-BACKUP_ENGINE=Y
 BACKUP_CONTROLFILE=Y
 BACKUP_DATAFILE=Y
 
@@ -89,12 +88,36 @@ META_TABLESPACE="${BACKUP_META_DIR}"/tablespace.log
 LOG_SCIPRT="${BACKUP_DIR}"/log/tibero_backup.log
 LOG_BACKUP_STATUS_PREV="${BACKUP_DIR}"/log/tibero_backup_status_prev.log
 LOG_BACKUP_STATUS_POST="${BACKUP_DIR}"/log/tibero_backup_status_post.log
-su - ${TB_USER} -c "mkdir -p "${BACKUP_ARCH_DIR}""
+
 su - ${TB_USER} -c "mkdir -p "${BACKUP_LOG_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_META_DIR}""
-su - ${TB_USER} -c "mkdir -p "${BACKUP_CTL_DIR}""
-su - ${TB_USER} -c "mkdir -p "${BACKUP_DATAFILE_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CONFIG_DIR}""
+
+if [ "Y" == "${BACKUP_CONTROLFILE}" ]
+then
+su - ${TB_USER} -c "mkdir -p "${BACKUP_CTL_DIR}""
+fi
+
+if [ "Y" == "${BACKUP_DATAFILE}" ]
+then
+su - ${TB_USER} -c "mkdir -p "${BACKUP_DATAFILE_DIR}""
+fi
+
+if [ "Y" == "${BACKUP_ARCHIVE_INCLUDE}" ] || [ "Y" == "${BACKUP_ARCHIVE}" ]
+then
+su - ${TB_USER} -c "mkdir -p "${BACKUP_ARCH_DIR}""
+fi
+
+if [ "Y" == "${BACKUP_EXTERNAL_TABLE}" ]
+then
+su - ${TB_USER} -c "mkdir -p "${BACKUP_EXTERNAL_TABLE_DIR}""
+fi
+
+if [ "Y" == "${BACKUP_EPA}" ]
+then
+su - ${TB_USER} -c "mkdir -p "${BACKUP_EPA_DIR}""
+fi
+
 }
 
 LINE_HEAD="#################################################################################"
@@ -389,6 +412,14 @@ echo "      - TBRMGR_INCREMENTAL_BACKUP: ${TBRMGR_INCREMENTAL_BACKUP}"
 echo "      - TBRMGR_COMPRESS: ${TBRMGR_COMPRESS}"
 echo "      - TBRMGR_WITH_ARCHIVELOG: ${TBRMGR_WITH_ARCHIVELOG}"
 echo "      - TBRMGR_WITH_PASSWORD_FILE: ${TBRMGR_WITH_PASSWORD_FILE}"
+#-----------------------------------------------------------------------
+echo "   - BACKUP_CONTROLFILE: ${BACKUP_CONTROLFILE}"
+echo "   - BACKUP_DATAFILE: ${BACKUP_DATAFILE}"
+echo "   - BACKUP_PASSWD_FILE: ${BACKUP_PASSWD_FILE}"
+echo "   - BACKUP_ARCHIVE: ${BACKUP_ARCHIVE}"
+echo "   - BACKUP_EPA: ${BACKUP_EPA}"
+echo "   - BACKUP_DIRECTORY_OBJECT: ${BACKUP_DIRECTORY_OBJECT}"
+echo "   - BACKUP_EXTERNAL_TABLE: ${BACKUP_EXTERNAL_TABLE}"
 #-----------------------------------------------------------------------
 echo "   - WORK_DIR: ${WORK_DIR}"
 echo "   - ARCH_DIR: ${ARCH_DIR}"
@@ -1185,7 +1216,7 @@ then
 echo "## EPA Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
 
-su - ${TB_USER} -c "mkdir -p "${BACKUP_EPA_DIR}""
+
 
 EPA_LIST=`su - ${TB_USER} -c "
 tbsql ${DB_USER}/${DB_PASS} -s <<EOF
@@ -1251,7 +1282,6 @@ if [ "Y" == "${BACKUP_EXTERNAL_TABLE}" ]
 then
 echo "## External Table Backup Start: `date +%Y-%m-%d\ %T`"
 echo "${LINE_MODULE}"
-su - ${TB_USER} -c "mkdir -p "${BACKUP_EXTERNAL_TABLE_DIR}""
 
 EXTERNAL_TABLE_LIST=`su - ${TB_USER} -c "
 tbsql ${DB_USER}/${DB_PASS} -s <<EOF
@@ -1397,15 +1427,15 @@ function_main(){
             function_error
             function_meta_getting
             function_backup_remove
-            function_controlfile_backup #CONTROLFILE 
-            function_archive_begin #DATAFILE
-            function_begin_backup #DATAFILE
-            function_tablespace_filecopy_filesystem #DATAFILE
-            function_tablespace_filecopy_tas #DATAFILE
+            function_controlfile_backup
+            function_archive_begin
+            function_begin_backup
+            function_tablespace_filecopy_filesystem
+            function_tablespace_filecopy_tas
             function_backup_passwd_file  
             function_external_table
             function_backup_epa
-            function_end_backup #DATAFILE
+            function_end_backup
             function_log_switch
             function_archive_end
             function_archive_copy            
@@ -1418,8 +1448,8 @@ function_main(){
             function_error
             function_meta_getting
             function_backup_remove
-            function_controlfile_backup  #CONTROLFILE 
-            function_tbrmgr #DATAFILE
+            function_controlfile_backup
+            function_tbrmgr
             function_backup_passwd_file
             function_external_table
             function_backup_epa
@@ -1431,7 +1461,6 @@ function_main(){
     function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
     funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null
     function_backup_database 1>>${LOG_SCIPRT} 2>/dev/null
-    #function_backup_database
     function_collection_backup_status_post 1>>${LOG_BACKUP_STATUS_POST} 2>/dev/null
 }
 
