@@ -71,6 +71,8 @@ TBRMGR_WITH_PASSWORD_FILE=Y
 # Do Not Change
 #-----------------------------------------------------------------------
 function_init(){
+# function_init(){...}
+#
 BACKUP_TIME=`date +%y%m%d_%H%M`
 BACKUP_DIR="${WORK_DIR}"/"${BACKUP_TIME}"
 BACKUP_LOG_DIR="${BACKUP_DIR}"/log
@@ -89,9 +91,14 @@ META_TABLESPACE="${BACKUP_META_DIR}"/tablespace.log
 LOG_SCIPRT="${BACKUP_DIR}"/log/tibero_backup.log
 LOG_BACKUP_STATUS_PREV="${BACKUP_DIR}"/log/tibero_backup_status_prev.log
 LOG_BACKUP_STATUS_POST="${BACKUP_DIR}"/log/tibero_backup_status_post.log
-
 su - ${TB_USER} -c "mkdir -p "${BACKUP_LOG_DIR}""
 su - ${TB_USER} -c "mkdir -p "${BACKUP_META_DIR}""
+}
+
+function_backup_directory (){
+# function_backup_directory(){...}
+#
+
 su - ${TB_USER} -c "mkdir -p "${BACKUP_CONFIG_DIR}""
 
 if [ "Y" == "${BACKUP_CONTROLFILE}" ]
@@ -120,7 +127,6 @@ su - ${TB_USER} -c "mkdir -p "${BACKUP_EPA_DIR}""
 fi
 
 }
-
 LINE_HEAD="#################################################################################"
 LINE_MODULE="---------------------------------------------------------------------------------"
 #-----------------------------------------------------------------------
@@ -1411,9 +1417,6 @@ function_main(){
         exit
     fi
 
-    # 스크립트 초기 설정 함수 수행
-    function_init
-
     function_backup_database(){
         # function_backup_database(){
         #   - 데이터베이스의 백업 수행
@@ -1422,10 +1425,12 @@ function_main(){
         # begin/end backup
         if [ "Y" == "${BACKUP_BEGINEND}" ]
         then
-            
             function_script_start
             function_script_options
             function_error
+            function_backup_directory
+            function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
+            funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null            
             function_meta_getting
             function_backup_remove
             function_controlfile_backup
@@ -1441,12 +1446,16 @@ function_main(){
             function_archive_end
             function_archive_copy            
             functipn_script_end         
+            function_collection_backup_status_post 1>>${LOG_BACKUP_STATUS_POST} 2>/dev/null            
         # tbrmgr backup
         elif [ "Y" == "${BACKUP_TBRMGR}"  ]
         then
             function_script_start
             function_script_options
             function_error
+            function_backup_directory
+            function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
+            funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null            
             function_meta_getting
             function_backup_remove
             function_controlfile_backup
@@ -1455,14 +1464,31 @@ function_main(){
             function_external_table
             function_backup_epa
             functipn_script_end
+            function_collection_backup_status_post 1>>${LOG_BACKUP_STATUS_POST} 2>/dev/null            
         fi
     }
-
+    # 스크립트 초기 설정 함수 수행
+    
+    function_df(){
+        while true
+        do
+            echo "----------------------------------------"
+            echo " Backup Progress (Usage KB) (`date +%Y/%m/%d" "%H:%M:%S`)"
+            echo "----------------------------------------"
+            du ${BACKUP_TIME} |sort -n
+            sleep 1
+            echo
+            echo
+            
+        done
+    }
     # 백업 수행 관련 메시지 로그 기록
-    function_collection_backup_status_prev 1>>${LOG_BACKUP_STATUS_PREV} 2>/dev/null
-    funciton_backup_configuration 1>>${BACKUP_CONFIG} 2>/dev/null
+    function_init
+    function_df &
+    DF_PID=$!
     function_backup_database 1>>${LOG_SCIPRT} 2>/dev/null
-    function_collection_backup_status_post 1>>${LOG_BACKUP_STATUS_POST} 2>/dev/null
+    kill $DF_PID
+    
 }
 
 ####################################################
